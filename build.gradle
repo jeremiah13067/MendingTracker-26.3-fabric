@@ -93,6 +93,7 @@ tasks.register('gametestJar', Jar) {
 tasks.register('productionClientTest', net.fabricmc.loom.task.prod.ClientProductionRunTask) {
     group = 'verification'
     description = 'Runs integration tests against the packaged mod with development mode disabled.'
+    outputs.upToDateWhen { false }
     mods.from(tasks.named('gametestJar'))
     runDir = layout.buildDirectory.dir("run/production-${optionalMods}")
     jvmArgs.addAll('-Dfabric.client.gametest', '-Dmendingtracker.test.packaged=true', "-Dmendingtracker.test.profile=${optionalMods}")
@@ -114,6 +115,7 @@ tasks.register('productionClientTest', net.fabricmc.loom.task.prod.ClientProduct
 tasks.register('productionClientRestartTest', net.fabricmc.loom.task.prod.ClientProductionRunTask) {
     group = 'verification'
     description = 'Restarts the packaged MiniHUD client and verifies persisted integration settings.'
+    outputs.upToDateWhen { false }
     dependsOn tasks.named('productionClientTest')
     onlyIf { optionalMods in ['minihud', 'all'] }
     mods.from(tasks.named('gametestJar'))
@@ -133,7 +135,11 @@ tasks.withType(AbstractArchiveTask).configureEach {
 }
 
 jar { from('LICENSE') { rename { "${it}_${modProjectName}" } } }
-tasks.named('sourcesJar') { from('LICENSE') { rename { "${it}_${modProjectName}" } } }
+tasks.named('sourcesJar') {
+    inputs.property 'version', releaseVersion
+    filesMatching('fabric.mod.json') { expand 'version': releaseVersion }
+    from('LICENSE') { rename { "${it}_${modProjectName}" } }
+}
 
 publishing {
     publications {
@@ -142,20 +148,22 @@ publishing {
 }
 
 tasks.register('verifyReleaseJar') {
-    dependsOn tasks.named('jar')
+    dependsOn tasks.named('jar'), tasks.named('sourcesJar')
     inputs.file(tasks.named('jar').flatMap { it.archiveFile })
+    inputs.file(tasks.named('sourcesJar').flatMap { it.archiveFile })
     doLast {
-        def archive = tasks.jar.archiveFile.get().asFile
-        new java.util.zip.ZipFile(archive).withCloseable { zip ->
-            def metadata = new groovy.json.JsonSlurper().parse(zip.getInputStream(zip.getEntry('fabric.mod.json')))
-            assert metadata.version == releaseVersion
-            assert metadata.depends.minecraft == '>=26.3 <26.4'
-            assert metadata.environment == 'client'
-            ['mendingtracker.mixins.json', 'assets/mending-tracker/icon.png',
-             'assets/mending-tracker/lang/en_us.json', "LICENSE_${modProjectName}"].each {
-                assert zip.getEntry(it) != null : "Missing release resource: ${it}"
+        [tasks.jar.archiveFile.get().asFile, tasks.sourcesJar.archiveFile.get().asFile].each { archive ->
+            new java.util.zip.ZipFile(archive).withCloseable { zip ->
+                def metadata = new groovy.json.JsonSlurper().parse(zip.getInputStream(zip.getEntry('fabric.mod.json')))
+                assert metadata.version == releaseVersion
+                assert metadata.depends.minecraft == '>=26.3 <26.4'
+                assert metadata.environment == 'client'
+                ['mendingtracker.mixins.json', 'assets/mending-tracker/icon.png',
+                 'assets/mending-tracker/lang/en_us.json', "LICENSE_${modProjectName}"].each {
+                    assert zip.getEntry(it) != null : "Missing release resource: ${it}"
+                }
+                assert !zip.entries().toList().any { it.name.contains('ClientTest') || it.name.contains('MiniHudChecks') || it.name.startsWith('META-INF/jars/') }
             }
-            assert !zip.entries().toList().any { it.name.contains('ClientTest') || it.name.contains('MiniHudChecks') || it.name.startsWith('META-INF/jars/') }
         }
     }
 }

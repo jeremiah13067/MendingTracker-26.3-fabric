@@ -67,9 +67,13 @@ public final class MendingTrackerClientTest implements FabricClientGameTest {
                 ItemStack withoutMending = new ItemStack(Items.DIAMOND_PICKAXE);
                 withoutMending.setDamageValue(50);
                 player.getInventory().setItem(1, withoutMending);
+                ItemStack hotbarMending = inventoryOnly.copy();
+                hotbarMending.setDamageValue(13);
+                player.getInventory().setItem(2, hotbarMending);
             });
             context.waitFor(client -> MendingTracker.totals().equals(new MendingTotals(6, 21)), 600);
             check(MendingTracker.totals().xpRequired() == 11, "XP rounding");
+            MendingTracker.LOGGER.info("Client checks: equipped totals verified");
             context.runOnClient(client -> {
                 client.debugEntries.setOverlayVisible(false);
                 ConfigHelper.configOptions.overrideMinihud = true;
@@ -88,7 +92,9 @@ public final class MendingTrackerClientTest implements FabricClientGameTest {
                 client.gui.hud.toggle();
             });
 
+            MendingTracker.LOGGER.info("Client checks: HUD visibility verified");
             context.takeScreenshot("standalone-six-items");
+            MendingTracker.LOGGER.info("Client checks: standalone screenshot captured");
             for (var alignment : ConfigOptions.Alignment.values()) {
                 context.runOnClient(client -> {
                     ConfigHelper.configOptions.textAlignment = alignment;
@@ -112,6 +118,10 @@ public final class MendingTrackerClientTest implements FabricClientGameTest {
             context.runOnClient(client -> check(MendingTracker.totals().damagedItems() == 5,
                     "non-mending hotbar item excluded"));
             context.runOnClient(client -> client.player.getInventory().setSelectedSlot(0));
+            context.runOnClient(client -> client.player.getInventory().setSelectedSlot(2));
+            context.waitFor(client -> MendingTracker.totals().equals(new MendingTotals(6, 29)), 600);
+            context.runOnClient(client -> client.player.getInventory().setSelectedSlot(0));
+            context.waitFor(client -> MendingTracker.totals().equals(new MendingTotals(5, 16)), 600);
 
             testConfiguration(context);
             if (FabricLoader.getInstance().isModLoaded("modmenu")) testModMenu(context);
@@ -123,6 +133,8 @@ public final class MendingTrackerClientTest implements FabricClientGameTest {
             });
             context.waitFor(client -> MendingTracker.totals().equals(MendingTotals.EMPTY), 600);
             context.takeScreenshot("zero-items");
+            equipDamagedMainHand(world, 7);
+            context.waitFor(client -> MendingTracker.totals().equals(new MendingTotals(1, 7)), 600);
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
                 player.hurtServer(player.level(), player.damageSources().genericKill(), Float.MAX_VALUE);
@@ -132,6 +144,8 @@ public final class MendingTrackerClientTest implements FabricClientGameTest {
             context.waitFor(client -> client.player != null && client.player.isAlive() && client.gui.screen() == null, 600);
             context.waitTick();
             check(MendingTracker.totals().equals(MendingTotals.EMPTY), "respawn has no stale equipment totals");
+            equipDamagedMainHand(world, 9);
+            context.waitFor(client -> MendingTracker.totals().equals(new MendingTotals(1, 9)), 600);
         }
         context.waitTick();
         context.runOnClient(client -> {
@@ -143,6 +157,17 @@ public final class MendingTrackerClientTest implements FabricClientGameTest {
             context.waitTicks(2);
             check(MendingTracker.totals().equals(MendingTotals.EMPTY), "reconnect starts with zero totals");
         }
+    }
+
+    private static void equipDamagedMainHand(
+            net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext world, int damage) {
+        world.getServer().runOnServer(server -> {
+            var player = server.getPlayerList().getPlayers().getFirst();
+            ItemStack stack = new ItemStack(Items.DIAMOND_PICKAXE);
+            stack.enchant(player.registryAccess().getOrThrow(Enchantments.MENDING), 1);
+            stack.setDamageValue(damage);
+            player.setItemSlot(EquipmentSlot.MAINHAND, stack);
+        });
     }
 
     private static void testConfiguration(ClientGameTestContext context) throws IOException {
