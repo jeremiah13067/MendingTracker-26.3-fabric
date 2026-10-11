@@ -34,11 +34,16 @@ public final class MendingTrackerClientTest implements FabricClientGameTest {
 
     private void runChecks(ClientGameTestContext context) throws Exception {
         checkProfile();
+        if (Boolean.getBoolean("mendingtracker.test.restart")) {
+            context.runOnClient(client -> MiniHudChecks.checkPersisted());
+            return;
+        }
         context.runOnClient(client -> {
             check(MendingTracker.totals().equals(MendingTotals.EMPTY), "title screen totals");
             check(!MendingTracker.shouldRenderStandalone(client), "no HUD outside a world");
         });
         try (var world = context.worldBuilder().create()) {
+            world.getConnection().waitForChunksRender();
             world.getServer().runOnServer(server -> {
                 var player = server.getPlayerList().getPlayers().getFirst();
                 var mending = player.registryAccess().getOrThrow(Enchantments.MENDING);
@@ -230,6 +235,9 @@ public final class MendingTrackerClientTest implements FabricClientGameTest {
     }
 
     static void check(boolean condition, String message) {
-        if (!condition) throw new AssertionError(message);
+        if (!condition) {
+            MendingTracker.LOGGER.error("Client integration assertion failed: {}", message);
+            throw new AssertionError(message);
+        }
     }
 }

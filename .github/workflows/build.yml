@@ -50,7 +50,7 @@ jobs:
       - name: Install virtual display and software rendering
         run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri mesa-vulkan-drivers libvulkan1
       - name: Test packaged mod in a production Fabric client
-        run: xvfb-run -a ./gradlew productionClientTest -PoptionalMods=${{ matrix.optional-mods }} --console=plain
+        run: xvfb-run -a ./gradlew productionClientRestartTest -PoptionalMods=${{ matrix.optional-mods }} --console=plain
       - uses: actions/upload-artifact@v7
         if: always()
         with:

@@ -35,11 +35,12 @@ Requires a full JDK 25. Set `JAVA_HOME` to that JDK, then use the checked-in wra
 ./gradlew runClient -PoptionalMods=all
 ./gradlew runClientGameTest -PoptionalMods=none
 ./gradlew productionClientTest -PoptionalMods=all
+./gradlew productionClientRestartTest -PoptionalMods=all
 ```
 
 On Windows use `gradlew.bat`. Runtime profiles are `none` (default), `modmenu`, `malilib`, `minihud` (includes MaLiLib), and `all`. Optional integrations are compile-only unless selected.
 
-`productionClientTest` loads the packaged mod and a separate test JAR with Fabric development mode disabled. It creates disposable test worlds and captures screenshots. Linux CI supplies a virtual display and software graphics. The test JAR is excluded from release artifacts.
+`productionClientTest` loads the packaged mod and a separate test JAR with Fabric development mode disabled. It creates disposable test worlds and captures screenshots. `productionClientRestartTest` also launches a second client for MiniHUD profiles to verify persisted settings. Linux CI supplies a virtual display and software graphics. The test JAR is excluded from release artifacts. Use `-PgraphicsBackend=vulkan` to select Minecraft's Vulkan backend for either packaged-client task.
 
 Release files and SHA-256 checksums are generated in `build/release/`. See [CHANGELOG.md](CHANGELOG.md), [RELEASE_NOTES.md](RELEASE_NOTES.md), and [VALIDATION.md](VALIDATION.md).
 

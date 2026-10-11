@@ -97,6 +97,9 @@ tasks.register('productionClientTest', net.fabricmc.loom.task.prod.ClientProduct
     runDir = layout.buildDirectory.dir("run/production-${optionalMods}")
     jvmArgs.addAll('-Dfabric.client.gametest', '-Dmendingtracker.test.packaged=true', "-Dmendingtracker.test.profile=${optionalMods}")
     programArgs.addAll('--username', 'Player0')
+    if (providers.gradleProperty('graphicsBackend').isPresent()) {
+        programArgs.addAll('--graphicsBackend', providers.gradleProperty('graphicsBackend').get())
+    }
     timeout = java.time.Duration.ofMinutes(10)
     doFirst {
         def directory = runDir.get().asFile.canonicalFile
@@ -106,6 +109,22 @@ tasks.register('productionClientTest', net.fabricmc.loom.task.prod.ClientProduct
         }
         delete directory
     }
+}
+
+tasks.register('productionClientRestartTest', net.fabricmc.loom.task.prod.ClientProductionRunTask) {
+    group = 'verification'
+    description = 'Restarts the packaged MiniHUD client and verifies persisted integration settings.'
+    dependsOn tasks.named('productionClientTest')
+    onlyIf { optionalMods in ['minihud', 'all'] }
+    mods.from(tasks.named('gametestJar'))
+    runDir = layout.buildDirectory.dir("run/production-${optionalMods}")
+    jvmArgs.addAll('-Dfabric.client.gametest', '-Dmendingtracker.test.packaged=true',
+            '-Dmendingtracker.test.restart=true', "-Dmendingtracker.test.profile=${optionalMods}")
+    programArgs.addAll('--username', 'Player0')
+    if (providers.gradleProperty('graphicsBackend').isPresent()) {
+        programArgs.addAll('--graphicsBackend', providers.gradleProperty('graphicsBackend').get())
+    }
+    timeout = java.time.Duration.ofMinutes(10)
 }
 
 tasks.withType(AbstractArchiveTask).configureEach {
