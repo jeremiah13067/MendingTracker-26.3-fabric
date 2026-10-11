@@ -1,35 +1,19 @@
 package redstonedisorder.mendingtracker;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import net.fabricmc.loader.api.FabricLoader;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-public class ConfigHelper {
-    static Path configPath = FabricLoader.getInstance().getConfigDir().resolve("mending-tracker.json");
-    static Gson gson = new GsonBuilder().setPrettyPrinting().create();
-
+public final class ConfigHelper {
+    private static final ConfigStore STORE = new ConfigStore(
+            FabricLoader.getInstance().getConfigDir().resolve("mending-tracker.json"));
     public static ConfigOptions configOptions = new ConfigOptions();
 
-    public static void getConfigOptions() {
-        if (Files.exists(configPath)) try (Reader reader = Files.newBufferedReader(configPath)) {
-            configOptions = gson.fromJson(reader, ConfigOptions.class);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
+    private ConfigHelper() {}
+
+    public static void getConfigOptions() { configOptions = STORE.load(); }
 
     public static boolean saveConfig(ConfigOptions options) {
-        try (Writer writer = Files.newBufferedWriter(configPath)) {
-            gson.toJson(options, writer);
-        } catch (IOException e) {
-            return false;
-        }
+        if (!STORE.save(options)) return false;
+        configOptions = options.normalized();
         return true;
     }
 }

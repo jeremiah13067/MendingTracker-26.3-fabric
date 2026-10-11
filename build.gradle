@@ -1,91 +1,164 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
-	id 'maven-publish'
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+    id 'maven-publish'
 }
 
-version = project.mod_version + "_mc" + project.target_version
+version = "${project.mod_version}+mc${project.minecraft_version}"
 group = project.maven_group
+def releaseVersion = version.toString()
+def modProjectName = project.name
 
 repositories {
-	// Add repositories to retrieve artifacts from in here.
-	// You should only use this when depending on other mods because
-	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
-	// for more information about repositories.
-	maven { url = "https://masa.dy.fi/maven/sakura-ryoko"
-		content {includeGroupAndSubgroups("fi.dy.masa")}
-	}
-	maven { url = 'https://maven.fallenbreath.me/releases'
-		content {includeGroupAndSubgroups("me.fallenbreath")}
-	}
-	maven {
-		name = "Terraformers"
-		url = "https://maven.terraformersmc.com/"
-	}
+    // Required transitively by MaLiLib and MiniHUD's conditional mixins.
+    maven {
+        url = 'https://maven.fallenbreath.me/releases'
+        content { includeGroup('me.fallenbreath') }
+    }
+    maven {
+        url = 'https://masa.dy.fi/maven/sakura-ryoko'
+        content { includeGroupAndSubgroups('fi.dy.masa') }
+    }
+    maven {
+        name = 'Terraformers'
+        url = 'https://maven.terraformersmc.com/'
+        content { includeGroup('com.terraformersmc') }
+    }
+}
+
+def optionalMods = providers.gradleProperty('optionalMods').getOrElse('none')
+if (!(optionalMods in ['none', 'modmenu', 'malilib', 'minihud', 'all'])) {
+    throw new GradleException("Unknown optionalMods profile: ${optionalMods}")
 }
 
 dependencies {
-	// To change the versions see the gradle.properties file
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    productionRuntimeMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	// Fabric API. This is technically optional, but you probably want it anyway.
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    compileOnly "fi.dy.masa.malilib:malilib-fabric-${project.minecraft_version}:${project.malilib_version}"
+    compileOnly "fi.dy.masa.minihud:minihud-fabric-${project.minecraft_version}:${project.minihud_version}"
+    compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 
-	compileOnly "fi.dy.masa.malilib:malilib-fabric-${project.minecraft_version}:${project.malilib_version}"
-	localRuntime "fi.dy.masa.malilib:malilib-fabric-${project.minecraft_version}:${project.malilib_version}"
+    if (optionalMods in ['malilib', 'minihud', 'all']) {
+        localRuntime "fi.dy.masa.malilib:malilib-fabric-${project.minecraft_version}:${project.malilib_version}"
+    }
+    if (optionalMods in ['minihud', 'all']) {
+        localRuntime "fi.dy.masa.minihud:minihud-fabric-${project.minecraft_version}:${project.minihud_version}"
+    }
+    if (optionalMods in ['modmenu', 'all']) {
+        localRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
+    }
 
-	compileOnly "fi.dy.masa.minihud:minihud-fabric-${project.minecraft_version}:${project.minihud_version}"
-	localRuntime "fi.dy.masa.minihud:minihud-fabric-${project.minecraft_version}:${project.minihud_version}"
-
-	implementation "com.terraformersmc:modmenu:${project.modmenu_version}"
+    testImplementation platform('org.junit:junit-bom:6.0.1')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 processResources {
-	def version = project.version
-	inputs.property "version", version
-
-	filesMatching("fabric.mod.json") {
-		expand "version": version
-	}
-}
-
-tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+    inputs.property 'version', releaseVersion
+    filesMatching('fabric.mod.json') { expand 'version': releaseVersion }
 }
 
 java {
-	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-	// if it is present.
-	// If you remove this line, sources will not be generated.
-	withSourcesJar()
-
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+    withSourcesJar()
 }
 
-jar {
-	def projectName = project.name
-	inputs.property "projectName", projectName
-
-	from("LICENSE") {
-		rename { "${it}_$projectName"}
-	}
+tasks.withType(JavaCompile).configureEach {
+    options.release = 25
+    options.encoding = 'UTF-8'
 }
 
-// configure the maven publication
+test { useJUnitPlatform() }
+
+fabricApi.configureTests {
+    createSourceSet = true
+    modId = 'mending-tracker-test'
+    enableGameTests = false
+    enableClientGameTests = true
+}
+
+loom.runConfigs.named('clientGameTest') {
+    systemProperties.put('mendingtracker.test.profile', optionalMods)
+}
+
+configurations.productionRuntimeMods.extendsFrom(configurations.localRuntime)
+
+tasks.register('gametestJar', Jar) {
+    archiveClassifier = 'gametest'
+    from sourceSets.gametest.output
+}
+
+tasks.register('productionClientTest', net.fabricmc.loom.task.prod.ClientProductionRunTask) {
+    group = 'verification'
+    description = 'Runs integration tests against the packaged mod with development mode disabled.'
+    mods.from(tasks.named('gametestJar'))
+    runDir = layout.buildDirectory.dir("run/production-${optionalMods}")
+    jvmArgs.addAll('-Dfabric.client.gametest', '-Dmendingtracker.test.packaged=true', "-Dmendingtracker.test.profile=${optionalMods}")
+    programArgs.addAll('--username', 'Player0')
+    timeout = java.time.Duration.ofMinutes(10)
+    doFirst {
+        def directory = runDir.get().asFile.canonicalFile
+        def expected = layout.buildDirectory.dir("run/production-${optionalMods}").get().asFile.canonicalFile
+        if (directory != expected || !directory.toPath().startsWith(layout.buildDirectory.get().asFile.canonicalFile.toPath())) {
+            throw new GradleException('Refusing to clear a production test directory outside build/')
+        }
+        delete directory
+    }
+}
+
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
+jar { from('LICENSE') { rename { "${it}_${modProjectName}" } } }
+tasks.named('sourcesJar') { from('LICENSE') { rename { "${it}_${modProjectName}" } } }
+
 publishing {
-	publications {
-		create("mavenJava", MavenPublication) {
-			from components.java
-		}
-	}
+    publications {
+        mavenJava(MavenPublication) { from components.java }
+    }
+}
 
-	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-	repositories {
-		// Add repositories to publish to here.
-		// Notice: This block does NOT have the same function as the block in the top level.
-		// The repositories here will be used for publishing your artifact, not for
-		// retrieving dependencies.
-	}
+tasks.register('verifyReleaseJar') {
+    dependsOn tasks.named('jar')
+    inputs.file(tasks.named('jar').flatMap { it.archiveFile })
+    doLast {
+        def archive = tasks.jar.archiveFile.get().asFile
+        new java.util.zip.ZipFile(archive).withCloseable { zip ->
+            def metadata = new groovy.json.JsonSlurper().parse(zip.getInputStream(zip.getEntry('fabric.mod.json')))
+            assert metadata.version == releaseVersion
+            assert metadata.depends.minecraft == '>=26.3 <26.4'
+            assert metadata.environment == 'client'
+            ['mendingtracker.mixins.json', 'assets/mending-tracker/icon.png',
+             'assets/mending-tracker/lang/en_us.json', "LICENSE_${modProjectName}"].each {
+                assert zip.getEntry(it) != null : "Missing release resource: ${it}"
+            }
+            assert !zip.entries().toList().any { it.name.contains('ClientTest') || it.name.contains('MiniHudChecks') || it.name.startsWith('META-INF/jars/') }
+        }
+    }
+}
+
+check.dependsOn tasks.named('verifyReleaseJar')
+
+tasks.register('prepareRelease') {
+    group = 'distribution'
+    description = 'Collects binary/source JARs, release documentation and SHA-256 checksums.'
+    dependsOn tasks.named('build')
+    doLast {
+        def releaseDir = layout.buildDirectory.dir('release').get().asFile
+        copy {
+            into releaseDir
+            from tasks.jar.archiveFile
+            from tasks.sourcesJar.archiveFile
+            from 'RELEASE_NOTES.md', 'CHANGELOG.md', 'VALIDATION.md', 'LICENSE'
+        }
+        def sums = [tasks.jar.archiveFile.get().asFile, tasks.sourcesJar.archiveFile.get().asFile].collect { file ->
+            def digest = java.security.MessageDigest.getInstance('SHA-256').digest(file.bytes).encodeHex()
+            "${digest}  ${file.name}"
+        }
+        new File(releaseDir, 'SHA256SUMS').setText(sums.join('\n') + '\n', 'UTF-8')
+    }
 }

@@ -1,15 +1,16 @@
 {
-	"required": true,
-	"package": "redstonedisorder.mendingtracker.mixin",
-	"compatibilityLevel": "JAVA_25",
-	"mixins": [
-		"MiniHudInfoLine",
-		"MiniHudLineRenderer"
-	],
-	"injectors": {
-		"defaultRequire": 1
-	},
-	"overwrites": {
-		"requireAnnotations": true
-	}
+  "required": true,
+  "package": "redstonedisorder.mendingtracker.mixin",
+  "plugin": "redstonedisorder.mendingtracker.mixin.OptionalIntegrationPlugin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "MiniHudInfoLine",
+    "MiniHudLineRenderer"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
 }

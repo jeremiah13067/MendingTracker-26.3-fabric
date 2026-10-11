@@ -1,40 +1,54 @@
 {
-	"schemaVersion": 1,
-	"id": "mending-tracker",
-	"version": "${version}",
-	"name": "Mending Tracker",
-	"description": "A mod that tracks the amount of XP left until all mending equipment is full.",
-	"authors": [
-		"RedstoneDisorder"
-	],
-	"contact": {
-		"source": "https://github.com/RedstoneDisorder/MendingTracker",
-		"issues": "https://github.com/RedstoneDisorder/MendingTracker/issues",
-		"home": "https://modrinth.com/mod/mending-tracker"
-	},
-	"license": "MIT",
-	"icon": "assets/mending-tracker/icon.png",
-	"environment": "client",
-	"entrypoints": {
-		"client": [
-			"redstonedisorder.mendingtracker.MendingTracker"
-		],
-		"modmenu": [
-			"redstonedisorder.mendingtracker.ModMenuIntegration"
-		]
-	},
-	"mixins": [
-		"mendingtracker.mixins.json"
-	],
-	"depends": {
-		"fabricloader": ">=0.19.5",
-		"minecraft": ">=26.2",
-		"java": ">=25",
-		"fabric-api": "*"
-	},
-	"suggests": {
-		"malilib": "*",
-		"minihud": "*",
-		"modmenu": "*"
-	}
+  "schemaVersion": 1,
+  "id": "mending-tracker",
+  "version": "${version}",
+  "name": "Mending Tracker",
+  "description": "Tracks equipped Mending items and the XP needed to repair them.",
+  "authors": [
+    "RedstoneDisorder"
+  ],
+  "contact": {
+    "sources": "https://github.com/jeremiah13067/MendingTracker-26.3-fabric",
+    "issues": "https://github.com/RedstoneDisorder/MendingTracker/issues",
+    "homepage": "https://github.com/jeremiah13067/MendingTracker-26.3-fabric"
+  },
+  "license": "MIT",
+  "icon": "assets/mending-tracker/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "redstonedisorder.mendingtracker.MendingTracker"
+    ],
+    "modmenu": [
+      "redstonedisorder.mendingtracker.ModMenuIntegration"
+    ]
+  },
+  "mixins": [
+    "mendingtracker.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": ">=26.3 <26.4",
+    "java": ">=25",
+    "fabric-api": ">=0.162.0"
+  },
+  "suggests": {
+    "malilib": ">=0.30.2 <0.31",
+    "minihud": ">=0.41.2 <0.42",
+    "modmenu": ">=21.0.0 <22.0.0"
+  },
+  "breaks": {
+    "malilib": [
+      "<0.30.2",
+      ">=0.31.0"
+    ],
+    "minihud": [
+      "<0.41.2",
+      ">=0.42.0"
+    ],
+    "modmenu": [
+      "<21.0.0",
+      ">=22.0.0"
+    ]
+  }
 }

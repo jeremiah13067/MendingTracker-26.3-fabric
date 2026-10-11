@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "mending-tracker-test",
+  "version": "1.0.0",
+  "name": "Mending Tracker integration tests",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-client-gametest": [
+      "redstonedisorder.mendingtracker.MendingTrackerClientTest"
+    ]
+  },
+  "depends": {
+    "mending-tracker": "*",
+    "fabric-client-gametest-api-v1": "*"
+  }
+}
