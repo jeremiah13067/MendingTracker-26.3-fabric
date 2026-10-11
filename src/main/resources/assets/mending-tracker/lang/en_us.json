@@ -1,4 +1,20 @@
 {
+  "mending-tracker.hud": "Equipment pieces to mend: %s, XP required: %s",
+  "mending-tracker.config.title": "Mending Tracker config screen",
+  "mending-tracker.config.x": "GUI element X position: %s",
+  "mending-tracker.config.y": "GUI element Y position: %s",
+  "mending-tracker.config.alignment": "Text alignment: %s",
+  "mending-tracker.config.override": "Override MiniHUD: %s",
+  "mending-tracker.config.minihud_missing": "MiniHUD is not installed, so this option will do nothing.",
+  "mending-tracker.config.save": "Save and exit",
+  "mending-tracker.config.discard": "Exit without saving",
+  "mending-tracker.config.error": "Config error",
+  "mending-tracker.config.save_failed": "The config could not be saved.",
+  "mending-tracker.alignment.Left": "Left",
+  "mending-tracker.alignment.Center": "Center",
+  "mending-tracker.alignment.Right": "Right",
   "minihud.config.info_toggle.comment.infoMending": "Shows how many mending items can be repaired\n(only from armor, hand, offhand) and the\namount of XP required to mend everything fully.",
+  "minihud.config.info_toggle.name.infoMending": "Mending",
+  "minihud.config.info_toggle.prettyName.infoMending": "Mending",
   "minihud.info_line.mending_info": "Equipment pieces to mend: %s%d%s, XP required: %s%d"
 }
